@@ -49,11 +49,13 @@ def assign_variable(line: str) -> bool:
     return False
 
 def internal_help(args: List[str]) -> int:
-    cmds = [c for c in internal_commands if c != 'set']
-    print(Fore.CYAN + "Internal commands:\n" +
-          "\n".join(f" - {c}" for c in cmds))
-    print("Supports variable expansion ($VAR), assignments VAR=val, "
-          "command chaining with ';', '&&', and pipes '|'")
+    cmds = sorted([c for c in internal_commands if c != 'set'])
+    help_text = Fore.CYAN + "Internal commands:\n"
+    help_text += "\n".join(f" - {c}" for c in cmds)
+    help_text += "\n\nAliases:\n - ld (ls)\n - e (echo)"
+    help_text += "\n\nSupports variable expansion ($VAR), assignments VAR=val, "
+    help_text += "command chaining with ';', '&&', and pipes '|'"
+    print(help_text)
     return 0
 
 def internal_exit(args: List[str]) -> int:
@@ -81,7 +83,46 @@ internal_commands = {
     "clear": internal_clear,
     "env": internal_env,
     "set": internal_set,
+    "cd": internal_cd,
+    "ld": internal_ls,
+    "e": internal_echo,
 }
+
+def internal_cd(args: List[str]) -> int:
+    if not args:
+        path = os.path.expanduser("~")
+    elif len(args) == 1:
+        path = args[0]
+    else:
+        print(Fore.RED + "cd: too many arguments")
+        return 1
+
+    try:
+        os.chdir(os.path.expanduser(path))
+        return 0
+    except FileNotFoundError:
+        print(Fore.RED + f"cd: no such file or directory: {path}")
+        return 1
+    except Exception as e:
+        print(Fore.RED + f"cd: {e}")
+        return 1
+
+def internal_ls(args: List[str]) -> int:
+    path = args[0] if args else "."
+    try:
+        for entry in os.listdir(os.path.expanduser(path)):
+            print(entry)
+        return 0
+    except FileNotFoundError:
+        print(Fore.RED + f"ls: cannot access '{path}': No such file or directory")
+        return 1
+    except Exception as e:
+        print(Fore.RED + f"ls: {e}")
+        return 1
+
+def internal_echo(args: List[str]) -> int:
+    print(" ".join(args))
+    return 0
 
 def execute_internal(cmd: str, args: List[str]) -> int:
     try:
