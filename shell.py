@@ -6,6 +6,7 @@ import re
 import readline
 import getpass
 import socket
+import shlex
 from typing import List, Optional
 from colorama import init, Fore, Style
 
@@ -161,18 +162,49 @@ def run_pipeline(line: str) -> int:
     return retcodes[-1] if retcodes else 0
 
 def execute_line(line: str) -> None:
-    sequences = [seq.strip() for seq in line.split(';') if seq.strip()]
-    for seq in sequences:
-        commands = [cmd.strip() for cmd in seq.split('&&') if cmd.strip()]
-        proceed = True
-        for cmd in commands:
-            if not proceed:
-                break
-            if '|' in cmd:
-                ret = run_pipeline(cmd)
-            else:
-                ret = run_command(cmd)
-            proceed = (ret == 0)
+    tokens = shlex.split(line, posix=True)
+    if not tokens:
+        return
+
+    segments = []
+    current = []
+    operators = []
+
+    i = 0
+    while i < len(tokens):
+        token = tokens[i]
+        if token in ['&&', '||', ';']:
+            segments.append(' '.join(current))
+            current = []
+            operators.append(token)
+        else:
+            current.append(token)
+        i += 1
+    if current:
+        segments.append(' '.join(current))
+
+    assert len(segments) >= 1
+
+    proceed = True
+    last_code = 0
+
+    for idx, segment in enumerate(segments):
+        if idx > 0:
+            op = operators[idx - 1]
+            if op == '&&' and last_code != 0:
+                proceed = False
+            elif op == '||' and last_code == 0:
+                proceed = False
+            else:
+                proceed = True
+
+        if not proceed:
+            continue
+
+        if '|' in segment:
+            last_code = run_pipeline(segment)
+        else:
+            last_code = run_command(segment)
 
 def shorten_cwd(path: str) -> str:
     home = os.path.expanduser("~")
