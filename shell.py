@@ -50,8 +50,10 @@ def assign_variable(line: str) -> bool:
 
 def internal_help(args: List[str]) -> int:
     cmds = [c for c in internal_commands if c != 'set']
-    print(Fore.CYAN + "Internal commands:\n" + "\n".join(f" - {c}" for c in cmds))
-    print("Supports variable expansion ($VAR), assignments VAR=val, command chaining with ';', '&&', and pipes '|'")
+    print(Fore.CYAN + "Internal commands:\n" +
+          "\n".join(f" - {c}" for c in cmds))
+    print("Supports variable expansion ($VAR), assignments VAR=val, "
+          "command chaining with ';', '&&', and pipes '|'")
     return 0
 
 def internal_exit(args: List[str]) -> int:
@@ -92,7 +94,9 @@ def execute_internal(cmd: str, args: List[str]) -> int:
 
 def execute_external(cmd: str, args: List[str], stdin=None, stdout=None) -> int:
     try:
-        proc = subprocess.Popen([cmd] + args, stdin=stdin, stdout=stdout)
+        proc = subprocess.Popen(
+            [cmd] + args, stdin=stdin, stdout=stdout
+        )
         proc.wait()
         return proc.returncode
     except Exception as e:
@@ -119,7 +123,8 @@ def run_command(line: str, stdin=None, stdout=None) -> int:
     if path:
         return execute_external(path, args, stdin=stdin, stdout=stdout)
 
-    print(Fore.RED + Style.BRIGHT + f"Command not found: '{cmd}'")
+    print(Fore.RED + Style.BRIGHT +
+          f"Command not found: '{cmd}'")
     return 127
 
 def run_pipeline(line: str) -> int:
@@ -142,7 +147,9 @@ def run_pipeline(line: str) -> int:
         stdout = subprocess.PIPE if i < len(commands) - 1 else None
 
         try:
-            proc = subprocess.Popen(cmd, shell=True, stdin=stdin, stdout=stdout)
+            proc = subprocess.Popen(
+                cmd, shell=True, stdin=stdin, stdout=stdout
+            )
         except Exception as e:
             print(Fore.RED + f"Pipeline execution failed: {e}")
             for p in procs:
@@ -162,49 +169,49 @@ def run_pipeline(line: str) -> int:
     return retcodes[-1] if retcodes else 0
 
 def execute_line(line: str) -> None:
-    tokens = shlex.split(line, posix=True)
-    if not tokens:
-        return
+    tokens = shlex.split(line, posix=True)
+    if not tokens:
+        return
 
-    segments = []
-    current = []
-    operators = []
+    segments = []
+    current = []
+    operators = []
 
-    i = 0
-    while i < len(tokens):
-        token = tokens[i]
-        if token in ['&&', '||', ';']:
-            segments.append(' '.join(current))
-            current = []
-            operators.append(token)
-        else:
-            current.append(token)
-        i += 1
-    if current:
-        segments.append(' '.join(current))
+    i = 0
+    while i < len(tokens):
+        token = tokens[i]
+        if token in ['&&', '||', ';']:
+            segments.append(' '.join(current))
+            current = []
+            operators.append(token)
+        else:
+            current.append(token)
+        i += 1
+    if current:
+        segments.append(' '.join(current))
 
-    assert len(segments) >= 1
+    assert len(segments) >= 1
 
-    proceed = True
-    last_code = 0
+    proceed = True
+    last_code = 0
 
-    for idx, segment in enumerate(segments):
-        if idx > 0:
-            op = operators[idx - 1]
-            if op == '&&' and last_code != 0:
-                proceed = False
-            elif op == '||' and last_code == 0:
-                proceed = False
-            else:
-                proceed = True
+    for idx, segment in enumerate(segments):
+        if idx > 0:
+            op = operators[idx - 1]
+            if op == '&&' and last_code != 0:
+                proceed = False
+            elif op == '||' and last_code == 0:
+                proceed = False
+            else:
+                proceed = True
 
-        if not proceed:
-            continue
+        if not proceed:
+            continue
 
-        if '|' in segment:
-            last_code = run_pipeline(segment)
-        else:
-            last_code = run_command(segment)
+        if '|' in segment:
+            last_code = run_pipeline(segment)
+        else:
+            last_code = run_command(segment)
 
 def shorten_cwd(path: str) -> str:
     home = os.path.expanduser("~")
@@ -222,7 +229,8 @@ def prompt() -> str:
 
 def main() -> None:
     load_history()
-    print(Fore.GREEN + "TrashShell v1.5 - type 'help' for commands")
+    print(Fore.GREEN + "TrashShell v1.5 - "
+          "type 'help' for commands")
 
     try:
         while True:
